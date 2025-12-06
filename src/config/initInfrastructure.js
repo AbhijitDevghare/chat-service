@@ -10,10 +10,6 @@ class Infrastructure {
   }
 
   async init() {
-    
-
-    // Initialize Redis (uncomment if you need Redis)
-    // this.redisClient = await initRedis();
 
     // Initialize RabbitMQ
     const { conn, channel } = await initRabbitMQ();

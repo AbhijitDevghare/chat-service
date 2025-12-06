@@ -21,7 +21,7 @@ async function startHttp() {
     const { Server } = require('socket.io');
     const io = new Server(server, {
       cors: {
-        origin: true,       // or your frontend URL
+        origin: process.env.FRONTEND_URL,       // or your frontend URL
         credentials: true,  // important to send cookies
       },
       pingTimeout: 20000,
