@@ -35,7 +35,7 @@ app.set('trust proxy', 1);
 
 // Routes will be mounted in server.js
 const routes = require('./routes/v1/index');
-app.use('/', routes);
+app.use('/chat', routes);
 app.get('/ping', (req, res) => res.send('PONG'));
 
 const errorMiddleware = require('./middleware/error.middleware');
