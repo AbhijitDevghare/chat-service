@@ -2,17 +2,18 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const http = require('http');
-const cookie = require('cookie');
-const jwt = require('jsonwebtoken');
-const { Server } = require('socket.io');
-
 const app = require('./app');
+
 const { connectMongo, disconnectMongo } = require('./config/mongo');
 const chatService = require('./services/chatService');
+const cookie = require('cookie');
+const jwt = require('jsonwebtoken');
+const { Server } = require("socket.io");
 
+// ---------------- PORT ----------------
 const port = process.env.PORT || 3003;
 
-// Create HTTP server (IMPORTANT)
+// ---------------- CREATE SERVER ----------------
 const server = http.createServer(app);
 
 // Store online users
@@ -22,7 +23,7 @@ async function startHttp() {
   try {
     await connectMongo();
 
-    // SOCKET.IO SERVER FIXED
+    // ---------------- SOCKET.IO ----------------
     const io = new Server(server, {
       cors: {
         origin: process.env.FRONTEND_URL,
@@ -33,7 +34,7 @@ async function startHttp() {
       pingTimeout: 20000,
     });
 
-    // AUTHENTICATION
+    // AUTH MIDDLEWARE (COOKIE JWT)
     io.use((socket, next) => {
       try {
         const cookies = socket.handshake.headers.cookie;
@@ -41,24 +42,22 @@ async function startHttp() {
 
         const parsed = cookie.parse(cookies);
         const token = parsed.token;
+
         if (!token) return next(new Error("No token found"));
 
         const user = jwt.verify(token, process.env.JWT_SECRET);
         socket.user = user;
 
         onlineUsers.set(user.id, socket.id);
-
         next();
       } catch (err) {
-        console.error("Socket auth error:", err.message);
-        next(new Error("Authentication error"));
+        return next(new Error("Authentication error"));
       }
     });
 
     // CONNECTION
     io.on("connection", (socket) => {
       const userId = socket.user.id;
-      console.log("User connected:", userId);
 
       io.emit("presence", { userId, online: true });
 
@@ -72,18 +71,12 @@ async function startHttp() {
           const { receiverId, text } = payload || {};
           let message, conversation;
 
-          try {
-            ({ message, conversation } = await chatService.sendMessage({
-              senderId: userId,
-              receiverId,
-              text,
-            }));
-          } catch {
-            message = { senderId: userId, text, createdAt: new Date() };
-            conversation = { _id: Math.random().toString(36).slice(2) };
-          }
+          ({ message, conversation } = await chatService.sendMessage({
+            senderId: userId,
+            receiverId,
+            text,
+          }));
 
-          // confirm to sender
           socket.emit("messageSent", {
             conversationId: String(conversation._id),
             message,
@@ -92,7 +85,6 @@ async function startHttp() {
           if (typeof cb === "function")
             cb({ ok: true, conversationId: String(conversation._id), message });
 
-          // send to receiver if online
           const receiverSocketId = onlineUsers.get(String(receiverId));
           if (receiverSocketId) {
             io.to(receiverSocketId).emit("receiveMessage", {
@@ -101,13 +93,13 @@ async function startHttp() {
             });
           }
         } catch (err) {
-          if (typeof cb === "function") cb({ ok: false, error: err.message });
+          if (cb) cb({ ok: false, error: err.message });
         }
       });
     });
 
-    // START SERVER
-    server.listen(port, () => {
+    // ---------------- START SERVER (IMPORTANT FIX) ----------------
+    server.listen(port, "0.0.0.0", () => {
       console.log(`Chat server running on port ${port}`);
     });
 
