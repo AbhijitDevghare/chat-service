@@ -28,7 +28,7 @@ app.use(helmet({
 app.set('trust proxy', 1);
 
 const routes = require('./routes/v1/index');
-app.use('/', routes);
+app.use('/chat', routes);
 
 app.get('/ping', (req, res) => res.send('PONG'));
 
