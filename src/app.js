@@ -13,17 +13,26 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,   // https://impactlog.me
+  origin: process.env.FRONTEND_URL,
   credentials: true,
 }));
+
+app.options("*", cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
+
 
 app.use(morgan('dev'));
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false,
+  referrerPolicy: false
 }));
+
 
 app.set('trust proxy', 1);
 
